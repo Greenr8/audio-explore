@@ -8,6 +8,7 @@
     body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 0 15px; }
     button { padding: 10px 20px; font-size: 16px; margin: 5px; }
     #stimulusArea, #doneMsg, #welcomeScreen { margin-top: 20px; }
+    #loadingMsg { text-align: center; margin-top: 30px; font-size: 18px; color: #555; }
   </style>
 </head>
 <body>
@@ -18,6 +19,8 @@
       <input type="text" id="participantName" placeholder="Ваше имя или псевдоним" style="width:100%; padding:8px; margin-bottom:10px;">
       <button id="startBtn">Начать тест</button>
     </div>
+
+    <div id="loadingMsg" style="display:none;">Загрузка...</div>
 
     <div id="stimulusArea" style="display:none;">
       <p id="stimulusText" style="font-weight:bold;"></p>
@@ -41,8 +44,8 @@
   </div>
 
   <script>
-    // ⚠️ Вставьте свой актуальный URL Apps Script
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxre4WDUeoBEyoHjgxCpubRIXLnjntON2CMEweu6NaeS_iw6JT6kOvdYbRen0WQDltp/exec";
+    // Твой рабочий Apps Script
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzF6OmPOXiwm-ZOYjUJMgh9HY061nd6P_Ki3_VV3JwhZATHx0hC8DWFhS3bvxQO3KjC/exec";
 
     let stimuliOrder = [];
     let currentIndex = 0;
@@ -56,13 +59,13 @@
     let recordedBlob = null;
 
     const welcomeScreen = document.getElementById('welcomeScreen');
+    const loadingMsg = document.getElementById('loadingMsg');
     const stimulusArea = document.getElementById('stimulusArea');
     const doneMsg = document.getElementById('doneMsg');
     const startBtn = document.getElementById('startBtn');
     const nextBtn = document.getElementById('nextBtn');
     const restartBtn = document.getElementById('restartBtn');
     const participantNameInput = document.getElementById('participantName');
-
     const stimulusText = document.getElementById('stimulusText');
     const playBtn = document.getElementById('playBtn');
     const textResponse = document.getElementById('textResponse');
@@ -74,7 +77,7 @@
     startBtn.addEventListener('click', async () => {
       participantName = participantNameInput.value.trim();
       welcomeScreen.style.display = 'none';
-      stimulusArea.style.display = 'block';
+      loadingMsg.style.display = 'block';
       await initTest();
     });
 
@@ -95,40 +98,52 @@
     });
 
     async function initTest() {
-      const resp = await fetch(`${SCRIPT_URL}?action=count`);
-      const data = await resp.json();
-      const total = data.total;
-      if (!total) {
-        alert('Нет стимулов в таблице.');
-        return;
+      try {
+        const resp = await fetch(`${SCRIPT_URL}?action=count`);
+        const data = await resp.json();
+        const total = data.total;
+        if (!total) {
+          alert('Нет стимулов в таблице.');
+          loadingMsg.style.display = 'none';
+          welcomeScreen.style.display = 'block';
+          return;
+        }
+        stimuliOrder = Array.from({length: total}, (_, i) => i);
+        for (let i = stimuliOrder.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [stimuliOrder[i], stimuliOrder[j]] = [stimuliOrder[j], stimuliOrder[i]];
+        }
+        currentIndex = 0;
+        await loadNext();
+      } catch(e) {
+        alert('Ошибка инициализации: ' + e.message);
+        loadingMsg.style.display = 'none';
+        welcomeScreen.style.display = 'block';
       }
-      stimuliOrder = Array.from({length: total}, (_, i) => i);
-      for (let i = stimuliOrder.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [stimuliOrder[i], stimuliOrder[j]] = [stimuliOrder[j], stimuliOrder[i]];
-      }
-      currentIndex = 0;
-      loadNext();
     }
 
     async function loadNext() {
       if (currentIndex >= stimuliOrder.length) {
+        loadingMsg.style.display = 'none';
         stimulusArea.style.display = 'none';
         doneMsg.style.display = 'block';
         return;
       }
+      loadingMsg.style.display = 'block';
+      stimulusArea.style.display = 'none';
+
       const index = stimuliOrder[currentIndex];
       try {
         const resp = await fetch(`${SCRIPT_URL}?action=getItem&index=${index}`);
         const data = await resp.json();
         if (data.done) {
-          stimulusArea.style.display = 'none';
+          loadingMsg.style.display = 'none';
           doneMsg.style.display = 'block';
           return;
         }
         currentStimulusId = data.id;
         stimulusText.textContent = data.text;
-        currentAudioFile = data.audioFile || null; // имя файла
+        currentAudioFile = data.audioFile || null;
         playBtn.style.display = currentAudioFile ? 'inline-block' : 'none';
         textResponse.value = '';
         recordedBlob = null;
@@ -136,20 +151,26 @@
         recordBtn.disabled = false;
         stopRecordBtn.disabled = true;
         recordStatus.textContent = '';
+
+        // Прячем загрузку, показываем стимул
+        loadingMsg.style.display = 'none';
+        stimulusArea.style.display = 'block';
       } catch (e) {
         alert('Ошибка загрузки стимула: ' + e.message);
+        loadingMsg.style.display = 'none';
+        stimulusArea.style.display = 'block';
       }
     }
 
     playBtn.addEventListener('click', () => {
       if (currentAudioFile) {
-        const audio = new Audio(currentAudioFile); // путь относительный, файл лежит рядом с index.html
+        const audio = new Audio(currentAudioFile);
         audio.play().catch(e => alert('Не удалось воспроизвести: ' + e.message));
       }
     });
 
-    // Запись голоса
-    recordBtn.onclick = async () => {
+    // Запись голоса (исправлено)
+    recordBtn.addEventListener('click', async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
@@ -170,19 +191,21 @@
       } catch (err) {
         recordStatus.textContent = 'Ошибка доступа к микрофону: ' + err.message;
       }
-    };
-    stopRecordBtn.onclick = () => {
+    });
+
+    stopRecordBtn.addEventListener('click', () => {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
         mediaRecorder.stream.getTracks().forEach(t => t.stop());
       }
-    };
-    playRecordBtn.onclick = () => {
+    });
+
+    playRecordBtn.addEventListener('click', () => {
       if (recordedBlob) {
         const url = URL.createObjectURL(recordedBlob);
         new Audio(url).play();
       }
-    };
+    });
 
     function blobToBase64(blob) {
       return new Promise((resolve, reject) => {
@@ -213,7 +236,7 @@
           headers: {'Content-Type': 'application/json'}
         });
         currentIndex++;
-        loadNext();
+        await loadNext();
       } catch (e) {
         alert('Ошибка отправки ответа: ' + e.message);
       }
