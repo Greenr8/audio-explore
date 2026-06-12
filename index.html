@@ -24,7 +24,10 @@
 
     <div id="stimulusArea" style="display:none;">
       <p id="stimulusText" style="font-weight:bold;"></p>
-      <button id="playBtn">▶ Воспроизвести звук</button>
+      <audio id="stimulusAudio" controls style="width:100%; margin:15px 0;" autoplay>
+        <source id="audioSource" src="" type="audio/mpeg">
+      </audio>
+      <button id="playBtn" style="display:none;">▶ Воспроизвести снова</button>
       <br><br>
       <label>Ваш ответ текстом:</label><br>
       <textarea id="textResponse" rows="3" cols="40"></textarea><br><br>
@@ -44,7 +47,6 @@
   </div>
 
   <script>
-    // Твой рабочий Apps Script
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzF6OmPOXiwm-ZOYjUJMgh9HY061nd6P_Ki3_VV3JwhZATHx0hC8DWFhS3bvxQO3KjC/exec";
 
     let stimuliOrder = [];
@@ -67,6 +69,8 @@
     const restartBtn = document.getElementById('restartBtn');
     const participantNameInput = document.getElementById('participantName');
     const stimulusText = document.getElementById('stimulusText');
+    const stimulusAudio = document.getElementById('stimulusAudio');
+    const audioSource = document.getElementById('audioSource');
     const playBtn = document.getElementById('playBtn');
     const textResponse = document.getElementById('textResponse');
     const recordBtn = document.getElementById('recordBtn');
@@ -90,7 +94,7 @@
       stopRecordBtn.disabled = true;
       playRecordBtn.disabled = true;
       recordBtn.disabled = false;
-      playBtn.style.display = 'inline-block';
+      playBtn.style.display = 'none';
       doneMsg.style.display = 'none';
       welcomeScreen.style.display = 'block';
       participantNameInput.value = '';
@@ -144,7 +148,24 @@
         currentStimulusId = data.id;
         stimulusText.textContent = data.text;
         currentAudioFile = data.audioFile || null;
-        playBtn.style.display = currentAudioFile ? 'inline-block' : 'none';
+        
+        // Загружаем и автоматически воспроизводим аудио
+        if (currentAudioFile) {
+          audioSource.src = currentAudioFile;
+          stimulusAudio.load();
+          stimulusAudio.style.display = 'block';
+          playBtn.style.display = 'none';
+          
+          // Пытаемся автовоспроизведение
+          stimulusAudio.play().catch(e => {
+            console.log('Автовоспроизведение заблокировано, показываем кнопку');
+            playBtn.style.display = 'inline-block';
+          });
+        } else {
+          stimulusAudio.style.display = 'none';
+          playBtn.style.display = 'none';
+        }
+        
         textResponse.value = '';
         recordedBlob = null;
         playRecordBtn.disabled = true;
@@ -152,7 +173,6 @@
         stopRecordBtn.disabled = true;
         recordStatus.textContent = '';
 
-        // Прячем загрузку, показываем стимул
         loadingMsg.style.display = 'none';
         stimulusArea.style.display = 'block';
       } catch (e) {
@@ -163,13 +183,9 @@
     }
 
     playBtn.addEventListener('click', () => {
-      if (currentAudioFile) {
-        const audio = new Audio(currentAudioFile);
-        audio.play().catch(e => alert('Не удалось воспроизвести: ' + e.message));
-      }
+      stimulusAudio.play().catch(e => alert('Не удалось воспроизвести: ' + e.message));
     });
 
-    // Запись голоса (исправлено)
     recordBtn.addEventListener('click', async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
