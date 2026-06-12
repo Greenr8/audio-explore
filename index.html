@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Музыкальный тест</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 0 15px; }
+    button { padding: 10px 20px; font-size: 16px; margin: 5px; }
+    #stimulusArea, #doneMsg, #welcomeScreen { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div id="testContainer">
+    <div id="welcomeScreen">
+      <h2>Музыкальный тест</h2>
+      <p>Введите имя (необязательно) и нажмите «Начать».</p>
+      <input type="text" id="participantName" placeholder="Ваше имя или псевдоним" style="width:100%; padding:8px; margin-bottom:10px;">
+      <button id="startBtn">Начать тест</button>
+    </div>
+
+    <div id="stimulusArea" style="display:none;">
+      <p id="stimulusText" style="font-weight:bold;"></p>
+      <button id="playBtn">▶ Воспроизвести звук</button>
+      <br><br>
+      <label>Ваш ответ текстом:</label><br>
+      <textarea id="textResponse" rows="3" cols="40"></textarea><br><br>
+      <button id="recordBtn">🎤 Записать голос</button>
+      <button id="stopRecordBtn" disabled>⏹ Стоп</button>
+      <button id="playRecordBtn" disabled>▶ Прослушать запись</button>
+      <p id="recordStatus"></p>
+      <br>
+      <button id="nextBtn">Далее</button>
+    </div>
+
+    <div id="doneMsg" style="display:none;">
+      ✅ Тест завершён. Спасибо за участие!
+      <br><br>
+      <button id="restartBtn">Пройти тест ещё раз</button>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ Вставьте свой актуальный URL Apps Script
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxre4WDUeoBEyoHjgxCpubRIXLnjntON2CMEweu6NaeS_iw6JT6kOvdYbRen0WQDltp/exec";
+
+    let stimuliOrder = [];
+    let currentIndex = 0;
+    let currentStimulusId = null;
+    let currentAudioFile = null;
+    let sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    let participantName = "";
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordedBlob = null;
+
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const stimulusArea = document.getElementById('stimulusArea');
+    const doneMsg = document.getElementById('doneMsg');
+    const startBtn = document.getElementById('startBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const participantNameInput = document.getElementById('participantName');
+
+    const stimulusText = document.getElementById('stimulusText');
+    const playBtn = document.getElementById('playBtn');
+    const textResponse = document.getElementById('textResponse');
+    const recordBtn = document.getElementById('recordBtn');
+    const stopRecordBtn = document.getElementById('stopRecordBtn');
+    const playRecordBtn = document.getElementById('playRecordBtn');
+    const recordStatus = document.getElementById('recordStatus');
+
+    startBtn.addEventListener('click', async () => {
+      participantName = participantNameInput.value.trim();
+      welcomeScreen.style.display = 'none';
+      stimulusArea.style.display = 'block';
+      await initTest();
+    });
+
+    restartBtn.addEventListener('click', () => {
+      stimuliOrder = [];
+      currentIndex = 0;
+      recordedBlob = null;
+      textResponse.value = '';
+      recordStatus.textContent = '';
+      stopRecordBtn.disabled = true;
+      playRecordBtn.disabled = true;
+      recordBtn.disabled = false;
+      playBtn.style.display = 'inline-block';
+      doneMsg.style.display = 'none';
+      welcomeScreen.style.display = 'block';
+      participantNameInput.value = '';
+      sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    });
+
+    async function initTest() {
+      const resp = await fetch(`${SCRIPT_URL}?action=count`);
+      const data = await resp.json();
+      const total = data.total;
+      if (!total) {
+        alert('Нет стимулов в таблице.');
+        return;
+      }
+      stimuliOrder = Array.from({length: total}, (_, i) => i);
+      for (let i = stimuliOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [stimuliOrder[i], stimuliOrder[j]] = [stimuliOrder[j], stimuliOrder[i]];
+      }
+      currentIndex = 0;
+      loadNext();
+    }
+
+    async function loadNext() {
+      if (currentIndex >= stimuliOrder.length) {
+        stimulusArea.style.display = 'none';
+        doneMsg.style.display = 'block';
+        return;
+      }
+      const index = stimuliOrder[currentIndex];
+      try {
+        const resp = await fetch(`${SCRIPT_URL}?action=getItem&index=${index}`);
+        const data = await resp.json();
+        if (data.done) {
+          stimulusArea.style.display = 'none';
+          doneMsg.style.display = 'block';
+          return;
+        }
+        currentStimulusId = data.id;
+        stimulusText.textContent = data.text;
+        currentAudioFile = data.audioFile || null; // имя файла
+        playBtn.style.display = currentAudioFile ? 'inline-block' : 'none';
+        textResponse.value = '';
+        recordedBlob = null;
+        playRecordBtn.disabled = true;
+        recordBtn.disabled = false;
+        stopRecordBtn.disabled = true;
+        recordStatus.textContent = '';
+      } catch (e) {
+        alert('Ошибка загрузки стимула: ' + e.message);
+      }
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (currentAudioFile) {
+        const audio = new Audio(currentAudioFile); // путь относительный, файл лежит рядом с index.html
+        audio.play().catch(e => alert('Не удалось воспроизвести: ' + e.message));
+      }
+    });
+
+    // Запись голоса
+    recordBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          recordBtn.disabled = false;
+          stopRecordBtn.disabled = true;
+          playRecordBtn.disabled = false;
+          recordStatus.textContent = 'Запись завершена.';
+        };
+        mediaRecorder.start();
+        recordBtn.disabled = true;
+        stopRecordBtn.disabled = false;
+        playRecordBtn.disabled = true;
+        recordStatus.textContent = 'Идёт запись...';
+      } catch (err) {
+        recordStatus.textContent = 'Ошибка доступа к микрофону: ' + err.message;
+      }
+    };
+    stopRecordBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      }
+    };
+    playRecordBtn.onclick = () => {
+      if (recordedBlob) {
+        const url = URL.createObjectURL(recordedBlob);
+        new Audio(url).play();
+      }
+    };
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    nextBtn.addEventListener('click', async () => {
+      const txt = textResponse.value.trim();
+      let audioBase64 = null;
+      if (recordedBlob) {
+        audioBase64 = await blobToBase64(recordedBlob);
+      }
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'submit',
+            stimulusId: currentStimulusId,
+            textResponse: txt,
+            audioData: audioBase64,
+            participantName: participantName,
+            sessionId: sessionId
+          }),
+          headers: {'Content-Type': 'application/json'}
+        });
+        currentIndex++;
+        loadNext();
+      } catch (e) {
+        alert('Ошибка отправки ответа: ' + e.message);
+      }
+    });
+  </script>
+</body>
+</html>
