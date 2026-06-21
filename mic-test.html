@@ -1,185 +1,43 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <title>Тест микрофона</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 15px; }
-    .step { padding: 10px; margin: 10px 0; border-radius: 6px; background: #f0f0f0; }
-    .ok { background: #c8e6c9; }
-    .fail { background: #ffcdd2; }
-    .wait { background: #fff9c4; }
-    button { padding: 12px 24px; font-size: 16px; margin: 5px; }
-    #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; margin-top: 20px; }
-  </style>
-</head>
+<html>
+<head><title>Микрофон тест</title></head>
 <body>
-  <h2>🎤 Тест микрофона</h2>
-  <p>Эта страница проверяет работу микрофона по шагам.</p>
-  
-  <button id="startTest">Начать тест</button>
-  
-  <div id="steps"></div>
-  
-  <div id="log"></div>
+  <h2>Тест микрофона</h2>
+  <button id="testBtn">Проверить микрофон</button>
+  <p id="status"></p>
+  <audio id="player" controls style="display:none;"></audio>
   
   <script>
-    const stepsDiv = document.getElementById('steps');
-    const logDiv = document.getElementById('log');
-    
-    function log(msg) {
-      const time = new Date().toLocaleTimeString();
-      logDiv.innerHTML += `[${time}] ${msg}\n`;
-      logDiv.scrollTop = logDiv.scrollHeight;
-      console.log(msg);
-    }
-    
-    function addStep(num, text, status) {
-      const div = document.createElement('div');
-      div.className = 'step ' + status;
-      div.innerHTML = `<strong>Шаг ${num}:</strong> ${text}`;
-      stepsDiv.appendChild(div);
-      return div;
-    }
-    
-    document.getElementById('startTest').addEventListener('click', async () => {
-      stepsDiv.innerHTML = '';
-      logDiv.innerHTML = '';
-      log('Тест начат');
+    document.getElementById('testBtn').addEventListener('click', async () => {
+      const status = document.getElementById('status');
+      const player = document.getElementById('player');
       
-      // Шаг 1: Проверка поддержки
-      const step1 = addStep(1, 'Проверка поддержки getUserMedia...', 'wait');
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        step1.className = 'step fail';
-        step1.innerHTML += '<br>❌ Браузер НЕ поддерживает getUserMedia';
-        log('getUserMedia не поддерживается');
-        return;
-      }
-      step1.className = 'step ok';
-      step1.innerHTML += '<br>✅ getUserMedia поддерживается';
-      log('getUserMedia поддерживается');
-      
-      // Шаг 2: Запрос разрешения
-      const step2 = addStep(2, 'Запрос разрешения на микрофон...', 'wait');
-      log('Запрашиваем разрешение...');
-      let stream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        step2.className = 'step ok';
-        step2.innerHTML += '<br>✅ Разрешение получено';
-        log('Разрешение получено');
-      } catch (err) {
-        step2.className = 'step fail';
-        step2.innerHTML += `<br>❌ Ошибка: ${err.name} - ${err.message}`;
-        log('Ошибка: ' + err.name + ' - ' + err.message);
-        return;
-      }
-      
-      // Шаг 3: Проверка треков
-      const step3 = addStep(3, 'Проверка аудиотреков...', 'wait');
-      const tracks = stream.getAudioTracks();
-      if (tracks.length === 0) {
-        step3.className = 'step fail';
-        step3.innerHTML += '<br>❌ Нет аудиотреков';
-        log('Нет аудиотреков');
-        return;
-      }
-      const track = tracks[0];
-      step3.className = 'step ok';
-      step3.innerHTML += `<br>✅ Трек: ${track.label}, состояние: ${track.readyState}`;
-      log('Трек: ' + track.label);
-      
-      // Шаг 4: Проверка поддерживаемых форматов
-      const step4 = addStep(4, 'Проверка поддерживаемых форматов...', 'wait');
-      const formats = [
-        'audio/webm',
-        'audio/webm;codecs=opus',
-        'audio/mp4',
-        'audio/ogg',
-        'audio/wav'
-      ];
-      let supported = [];
-      formats.forEach(f => {
-        if (MediaRecorder.isTypeSupported(f)) {
-          supported.push(f);
-        }
-      });
-      step4.className = 'step ok';
-      step4.innerHTML += '<br>✅ Поддерживаемые форматы: ' + (supported.length ? supported.join(', ') : 'НИ ОДИН!');
-      log('Поддерживаемые форматы: ' + supported.join(', '));
-      
-      // Шаг 5: Создание MediaRecorder
-      const step5 = addStep(5, 'Создание MediaRecorder...', 'wait');
-      let recorder;
-      try {
-        const mimeType = supported[0] || 'audio/webm';
-        recorder = new MediaRecorder(stream, { mimeType: mimeType });
-        step5.className = 'step ok';
-        step5.innerHTML += `<br>✅ MediaRecorder создан, формат: ${mimeType}`;
-        log('MediaRecorder создан, формат: ' + mimeType);
-      } catch (err) {
-        step5.className = 'step fail';
-        step5.innerHTML += `<br>❌ Ошибка: ${err.message}`;
-        log('Ошибка создания MediaRecorder: ' + err.message);
-        return;
-      }
-      
-      // Шаг 6: Запись 3 секунд
-      const step6 = addStep(6, 'Запись 3 секунды...', 'wait');
-      log('Начинаем запись...');
-      const chunks = [];
-      recorder.ondataavailable = e => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-          log('Получено данных: ' + e.data.size + ' байт');
-        }
-      };
-      
-      recorder.onstop = () => {
-        if (chunks.length === 0) {
-          step6.className = 'step fail';
-          step6.innerHTML += '<br>❌ Нет данных после записи';
-          log('Нет данных после записи');
-          return;
-        }
-        const blob = new Blob(chunks, { type: recorder.mimeType });
-        step6.className = 'step ok';
-        step6.innerHTML += `<br>✅ Запись готова! Размер: ${(blob.size / 1024).toFixed(1)} KB, тип: ${blob.type}`;
-        log('Запись готова: ' + (blob.size / 1024).toFixed(1) + ' KB');
+        status.textContent = 'Запрашиваю микрофон...';
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        status.textContent = '✅ Микрофон работает! Говори...';
         
-        // Шаг 7: Воспроизведение
-        const step7 = addStep(7, 'Воспроизведение записи...', 'wait');
-        try {
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audio.play();
-          step7.className = 'step ok';
-          step7.innerHTML += '<br>✅ Воспроизведение запущено (должно быть слышно)';
-          log('Воспроизведение запущено');
-        } catch (err) {
-          step7.className = 'step fail';
-          step7.innerHTML += `<br>❌ Ошибка воспроизведения: ${err.message}`;
-          log('Ошибка воспроизведения: ' + err.message);
-        }
+        const recorder = new MediaRecorder(stream);
+        const chunks = [];
         
-        // Останавливаем треки
-        stream.getTracks().forEach(t => t.stop());
-        log('Тест завершён');
-      };
-      
-      recorder.onerror = e => {
-        step6.className = 'step fail';
-        step6.innerHTML += `<br>❌ Ошибка записи: ${e.error}`;
-        log('Ошибка записи: ' + e.error);
-      };
-      
-      recorder.start();
-      log('recorder.start() вызван');
-      
-      setTimeout(() => {
-        recorder.stop();
-        log('recorder.stop() вызван');
-      }, 3000);
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          player.src = URL.createObjectURL(blob);
+          player.style.display = 'block';
+          status.textContent = '✅ Запись готова! Нажми Play.';
+          stream.getTracks().forEach(t => t.stop());
+        };
+        
+        recorder.start();
+        
+        setTimeout(() => {
+          recorder.stop();
+        }, 3000); // Записываем 3 секунды
+        
+      } catch (err) {
+        status.textContent = '❌ Ошибка: ' + err.name + ' - ' + err.message;
+      }
     });
   </script>
 </body>
