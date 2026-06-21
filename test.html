@@ -118,51 +118,50 @@
 
     // Загрузка одного раунда (случайный текст + случайное аудио)
     async function loadNext() {
-      if (currentRound >= TOTAL_ROUNDS) {
+    if (currentRound >= TOTAL_ROUNDS) {
         loadingMsg.style.display = 'none';
         stimulusArea.style.display = 'none';
         doneMsg.style.display = 'block';
         return;
-      }
-      loadingMsg.style.display = 'block';
-      stimulusArea.style.display = 'none';
+    }
+    loadingMsg.style.display = 'block';
+    stimulusArea.style.display = 'none';
 
-      try {
-        // Запрашиваем случайный текст и случайное аудио одновременно
+    try {
+        // Запрашиваем случайный текст и случайный звук одновременно
         const [textResp, audioResp] = await Promise.all([
-          fetch(SCRIPT_URL + '?action=randomText'),
-          fetch(SCRIPT_URL + '?action=randomAudio')
+        fetch(SCRIPT_URL + '?action=randomText'),
+        fetch(SCRIPT_URL + '?action=randomAudio')
         ]);
         const textData = await textResp.json();
         const audioData = await audioResp.json();
-        currentTextValue = textValue;
-        currentAudioValue = audioValue;
 
         if (textData.error || audioData.error) {
-          alert('Ошибка получения стимулов: проверьте листы Texts и Audios в таблице');
-          loadingMsg.style.display = 'none';
-          doneMsg.style.display = 'block';
-          return;
+        alert('Ошибка получения стимулов: проверьте листы Texts и Audios в таблице');
+        loadingMsg.style.display = 'none';
+        doneMsg.style.display = 'block';
+        return;
         }
 
-        const textValue = textData.value;
-        const audioValue = audioData.value;
+        // Сразу записываем в глобальные переменные, без создания локальных textValue/audioValue
+        currentTextValue = textData.value;
+        currentAudioValue = audioData.value;
         currentStimulusId = 'mix_' + currentRound; // идентификатор для записи
 
-        stimulusText.textContent = textValue;
+        stimulusText.textContent = currentTextValue;
 
-        if (audioValue) {
-          audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + audioValue;
-          stimulusAudio.load();
-          stimulusAudio.style.display = 'block';
-          playBtn.style.display = 'none';
-          stimulusAudio.play().catch(e => {
+        if (currentAudioValue) {
+        audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + currentAudioValue;
+        stimulusAudio.load();
+        stimulusAudio.style.display = 'block';
+        playBtn.style.display = 'none';
+        stimulusAudio.play().catch(e => {
             console.log('Автоплей заблокирован');
             playBtn.style.display = 'inline-block';
-          });
+        });
         } else {
-          stimulusAudio.style.display = 'none';
-          playBtn.style.display = 'none';
+        stimulusAudio.style.display = 'none';
+        playBtn.style.display = 'none';
         }
 
         textResponse.value = '';
@@ -175,11 +174,11 @@
 
         loadingMsg.style.display = 'none';
         stimulusArea.style.display = 'block';
-      } catch (e) {
+    } catch (e) {
         alert('Ошибка загрузки: ' + e.message);
         loadingMsg.style.display = 'none';
         stimulusArea.style.display = 'block';
-      }
+    }
     }
 
     playBtn.addEventListener('click', () => {
