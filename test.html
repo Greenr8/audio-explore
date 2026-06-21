@@ -20,7 +20,23 @@
       <input type="text" id="participantName" placeholder="Ваше имя" style="width:100%; padding:8px; margin-bottom:10px; box-sizing: border-box;">
       <button id="startBtn">Начать тест</button>
     </div>
-
+    <div id="instructionScreen" style="display:none; max-width:600px; margin:0 auto; padding:20px;">
+      <h2 style="color:#2c3e50;">Инструкция</h2>
+      
+      <div style="background:#fff3cd; border-left:4px solid #ffc107; padding:15px; margin:20px 0; border-radius:4px;">
+        <strong>⚠️ Важно:</strong> После теста не забудьте заполнить анкету (если еще не заполнили)
+      </div>
+      
+      <div style="background:#f8d7da; border-left:4px solid #dc3545; padding:15px; margin:20px 0; border-radius:4px;">
+        <strong>⚠️ Внимание:</strong> Тест очень капризен к разрешениям в браузере/телефоне. Если у браузера нет разрешения на запись звука или микрофон не подключен - записать вашу речь не получится.
+      </div>
+      
+      <div style="background:#d1ecf1; border-left:4px solid #17a2b8; padding:15px; margin:20px 0; border-radius:4px;">
+        <strong>📝 Задание:</strong> В ответе нужно написать ваше отношение к тексту.
+      </div>
+      
+      <button id="startTestBtn" style="width:100%; padding:18px; font-size:18px; background:#27ae60; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:20px;">Начать тест</button>
+    </div>
     <div id="loadingMsg" style="display:none; text-align:center; margin-top:30px;">Загрузка...</div>
 
     <div id="stimulusArea" style="display:none;">
