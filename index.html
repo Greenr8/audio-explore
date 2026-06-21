@@ -88,6 +88,7 @@
     const recordStatus = document.getElementById('recordStatus');
 
     startBtn.addEventListener('click', async () => {
+      
       participantName = participantNameInput.value.trim() || 'Аноним';
       welcomeScreen.style.display = 'none';
       loadingMsg.style.display = 'block';
@@ -262,6 +263,11 @@
     }
 
     nextBtn.addEventListener('click', async () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        // Ждем 500мс, чтобы браузер успел собрать аудио в recordedBlob
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       const txt = textResponse.value.trim();
       let audioBase64 = null;
       if (recordedBlob) {
