@@ -82,6 +82,8 @@
     let recordedBlob = null;
     let mediaStream = null;
     let currentMimeType = 'audio/webm';
+    let currentTextValue = null;
+    let currentAudioValue = null;
 
     const welcomeScreen = document.getElementById('welcomeScreen');
     const loadingMsg = document.getElementById('loadingMsg');
@@ -133,6 +135,8 @@
         ]);
         const textData = await textResp.json();
         const audioData = await audioResp.json();
+        currentTextValue = textValue;
+        currentAudioValue = audioValue;
 
         if (textData.error || audioData.error) {
           alert('Ошибка получения стимулов: проверьте листы Texts и Audios в таблице');
@@ -278,7 +282,9 @@
             audioData: audioBase64,
             mimeType: currentMimeType,
             participantName: participantName,
-            sessionId: sessionId
+            sessionId: sessionId,
+            textValue: currentTextValue,
+            audioValue: currentAudioValue
           })
         });
         currentRound++;
