@@ -430,6 +430,52 @@
       { id: 'gamesFreq', display: 'gamesValue' },
       { id: 'moviesFreq', display: 'moviesValue' }
     ];
+    // Слайдеры - обновление значений с текстом
+    const sliderConfigs = {
+    instrumentActivity: [
+        'Никогда не играл',
+        'Мало играл раньше, сейчас не играю',
+        'Играл мало, но играю сейчас мало',
+        'Музицирую иногда',
+        'Играю регулярно',
+        'Сочиняю'
+    ],
+    shortVideosFreq: [
+        'Почти не смотрю',
+        'Редко',
+        'Иногда',
+        'Часто',
+        'Очень часто',
+        'Постоянно'
+    ],
+    gamesFreq: [
+        'Не играю',
+        'Очень редко',
+        'Редко',
+        'Иногда',
+        'Часто',
+        'Постоянно'
+    ],
+    moviesFreq: [
+        'Очень редко',
+        'Редко',
+        'Иногда',
+        'Часто'
+    ]
+    };
+
+    Object.keys(sliderConfigs).forEach(sliderName => {
+    const input = document.querySelector(`input[name="${sliderName}"]`);
+    const display = document.getElementById(sliderName.replace('Freq', 'Value').replace('Activity', 'Value'));
+    const labels = sliderConfigs[sliderName];
+    
+    input.addEventListener('input', function() {
+        display.textContent = labels[this.value];
+    });
+    
+    // Инициализация
+    display.textContent = labels[input.value];
+    });
 
     sliders.forEach(slider => {
       const input = document.querySelector(`input[name="${slider.id}"]`);
