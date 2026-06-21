@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Анкета</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 0 15px; }
+    h2 { color: #333; }
+    .question { margin: 20px 0; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; }
+    input, select { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 15px 30px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 20px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .back-btn { background: #666; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back-btn" style="display:inline-block; padding:10px 20px; background:#666; color:white; text-decoration:none; border-radius:4px;">← Назад</a>
+  
+  <h2>Анкета</h2>
+  <form id="surveyForm">
+    <div class="question">
+      <label>1. Смотрели ли вы обучающие видео по музыке?</label>
+      <select name="watchVideos" required>
+        <option value="">Выберите...</option>
+        <option value="yes">Да</option>
+        <option value="no">Нет</option>
+      </select>
+    </div>
+
+    <div class="question">
+      <label>2. Смотрите ли вы короткие видео (TikTok, Shorts, Reels)?</label>
+      <select name="shortVideos" required>
+        <option value="">Выберите...</option>
+        <option value="daily">Каждый день</option>
+        <option value="sometimes">Иногда</option>
+        <option value="rarely">Редко</option>
+        <option value="never">Не смотрю</option>
+      </select>
+    </div>
+
+    <div class="question">
+      <label>3. Сколько фильмов вы посмотрели за последний месяц?</label>
+      <input type="number" name="moviesCount" min="0" required>
+    </div>
+
+    <div class="question">
+      <label>4. Есть ли у вас музыкальное образование?</label>
+      <select name="musicBackground" required>
+        <option value="">Выберите...</option>
+        <option value="school">Музыкальная школа</option>
+        <option value="conservatory">Консерватория/колледж</option>
+        <option value="self-taught">Самоучка (много слушаю)</option>
+        <option value="none">Нет музыкального образования</option>
+      </select>
+    </div>
+
+    <div class="question">
+      <label>5. Ваше имя (латиницей, для файлов)</label>
+      <input type="text" name="participantName" placeholder="Vasya" required>
+    </div>
+
+    <button type="submit" id="submitBtn">Отправить анкету</button>
+  </form>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS612e5vnkHNAQCBdKXCj2EP_eVrNRnmA6iANvOeQhiQXoWhko78KSNjoGcQAX93yg/exec";
+    
+    document.getElementById('surveyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Отправка...';
+      
+      const formData = new FormData(e.target);
+      const data = {
+        action: 'submitSurvey',
+        watchVideos: formData.get('watchVideos'),
+        shortVideos: formData.get('shortVideos'),
+        moviesCount: formData.get('moviesCount'),
+        musicBackground: formData.get('musicBackground'),
+        participantName: formData.get('participantName')
+      };
+      
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+        
+        localStorage.setItem('participantName', data.participantName);
+        alert('✅ Анкета отправлена! Теперь пройдите тест.');
+        window.location.href = 'index.html';
+      } catch (err) {
+        alert('Ошибка: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Отправить анкету';
+      }
+    });
+  </script>
+</body>
+</html>
