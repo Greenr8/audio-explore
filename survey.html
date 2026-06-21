@@ -6,210 +6,43 @@
   <title>Анкета</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
-      max-width: 700px; 
-      margin: 0 auto; 
-      padding: 20px 15px; 
-      background: #f5f5f5;
-      color: #333;
-    }
-    h1 { 
-      text-align: center; 
-      margin-bottom: 30px; 
-      color: #2c3e50;
-      font-size: 28px;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 25px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .question {
-      margin-bottom: 25px;
-    }
-    .question:last-child {
-      margin-bottom: 0;
-    }
-    label { 
-      display: block; 
-      margin-bottom: 10px; 
-      font-weight: 600;
-      font-size: 16px;
-      color: #2c3e50;
-    }
-    .sublabel {
-      font-size: 14px;
-      color: #7f8c8d;
-      font-weight: normal;
-      margin-top: 5px;
-    }
-    select, input[type="text"] { 
-      width: 100%; 
-      padding: 12px; 
-      border: 2px solid #e0e0e0; 
-      border-radius: 8px; 
-      font-size: 16px;
-      background: white;
-      transition: border-color 0.3s;
-    }
-    select:focus, input[type="text"]:focus {
-      outline: none;
-      border-color: #3498db;
-    }
-    .radio-group, .checkbox-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .radio-option, .checkbox-option {
-      display: flex;
-      align-items: center;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    .radio-option:hover, .checkbox-option:hover {
-      border-color: #3498db;
-      background: #f8f9fa;
-    }
-    .radio-option input, .checkbox-option input {
-      margin-right: 12px;
-      width: 20px;
-      height: 20px;
-      cursor: pointer;
-    }
-    .radio-option.selected, .checkbox-option.selected {
-      border-color: #3498db;
-      background: #ebf5fb;
-    }
-    .slider-container {
-      margin-top: 15px;
-    }
-    .slider {
-      width: 100%;
-      height: 8px;
-      border-radius: 4px;
-      background: #e0e0e0;
-      outline: none;
-      -webkit-appearance: none;
-      appearance: none;
-      cursor: pointer;
-    }
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: #3498db;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .slider::-moz-range-thumb {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: #3498db;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .slider-value {
-      text-align: center;
-      margin-top: 10px;
-      font-size: 18px;
-      font-weight: 600;
-      color: #3498db;
-    }
-    .slider-labels {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 8px;
-      font-size: 12px;
-      color: #7f8c8d;
-    }
-    .conditional {
-      display: none;
-      margin-top: 15px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-    .conditional.show {
-      display: block;
-    }
-    button {
-      width: 100%;
-      padding: 18px;
-      font-size: 18px;
-      font-weight: 600;
-      background: #27ae60;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s;
-      margin-top: 20px;
-    }
-    button:hover {
-      background: #229954;
-    }
-    button:disabled {
-      background: #95a5a6;
-      cursor: not-allowed;
-    }
-    .back-link {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #3498db;
-      text-decoration: none;
-      font-size: 16px;
-    }
-    .back-link:hover {
-      text-decoration: underline;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px 15px; background: #f5f5f5; color: #333; }
+    h1 { text-align: center; margin-bottom: 30px; color: #2c3e50; font-size: 28px; }
+    .card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .question { margin-bottom: 25px; }
+    .question:last-child { margin-bottom: 0; }
+    label { display: block; margin-bottom: 10px; font-weight: 600; font-size: 16px; color: #2c3e50; }
+    select, input[type="text"] { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; background: white; }
+    .radio-group, .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
+    .radio-option, .checkbox-option { display: flex; align-items: center; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; }
+    .radio-option input, .checkbox-option input { margin-right: 12px; width: 20px; height: 20px; cursor: pointer; }
+    .radio-option.selected, .checkbox-option.selected { border-color: #3498db; background: #ebf5fb; }
+    .slider-container { margin-top: 15px; }
+    .slider { width: 100%; height: 8px; border-radius: 4px; background: #e0e0e0; outline: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+    .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #3498db; cursor: pointer; }
+    .slider::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #3498db; cursor: pointer; border: none; }
+    .slider-value { text-align: center; margin-top: 10px; font-size: 16px; font-weight: 600; color: #3498db; min-height: 40px; }
+    .conditional { display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+    .conditional.show { display: block; }
+    button { width: 100%; padding: 18px; font-size: 18px; font-weight: 600; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+    button:disabled { background: #95a5a6; cursor: not-allowed; }
+    .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
   </style>
 </head>
 <body>
   <a href="index.html" class="back-link">← Назад</a>
-  
   <h1>📋 Анкета</h1>
-  
   <form id="surveyForm">
-    <!-- Образование -->
     <div class="card">
       <div class="question">
         <label>Какое у вас образование?</label>
         <div class="radio-group">
-          <label class="radio-option">
-            <input type="radio" name="education" value="sound" required>
-            <span>Звукорежиссер</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="education" value="cinema">
-            <span>Кино</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="education" value="music">
-            <span>Музыка</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="education" value="philology">
-            <span>Филолог</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="education" value="linguistics">
-            <span>Лингвист</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="education" value="other">
-            <span>Другое</span>
-          </label>
+          <label class="radio-option"><input type="radio" name="education" value="sound" required><span>Звукорежиссер</span></label>
+          <label class="radio-option"><input type="radio" name="education" value="cinema"><span>Кино</span></label>
+          <label class="radio-option"><input type="radio" name="education" value="music"><span>Музыка</span></label>
+          <label class="radio-option"><input type="radio" name="education" value="philology"><span>Филолог</span></label>
+          <label class="radio-option"><input type="radio" name="education" value="linguistics"><span>Лингвист</span></label>
+          <label class="radio-option"><input type="radio" name="education" value="other"><span>Другое</span></label>
         </div>
         <div class="conditional" id="educationOther">
           <input type="text" name="educationOther" placeholder="Укажите ваше образование">
@@ -217,161 +50,95 @@
       </div>
     </div>
 
-    <!-- Инструменты -->
     <div class="card">
       <div class="question">
         <label>Играете ли на музыкальных инструментах?</label>
         <div class="radio-group">
-          <label class="radio-option">
-            <input type="radio" name="playsInstrument" value="yes" required>
-            <span>Да</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="playsInstrument" value="no">
-            <span>Нет</span>
-          </label>
+          <label class="radio-option"><input type="radio" name="playsInstrument" value="yes" required><span>Да</span></label>
+          <label class="radio-option"><input type="radio" name="playsInstrument" value="no"><span>Нет</span></label>
         </div>
         <div class="conditional" id="instrumentDetails">
           <label>На каких инструментах?</label>
           <input type="text" name="instruments" placeholder="Фортепиано, гитара...">
-          
           <div class="slider-container">
             <label>Активность игры:</label>
             <input type="range" name="instrumentActivity" min="0" max="5" value="0" class="slider">
-            <div class="slider-value" id="instrumentValue">0</div>
-            <div class="slider-labels">
-              <span>Никогда</span>
-              <span>Сочиняю</span>
-            </div>
+            <div class="slider-value" id="instrumentValue">Никогда не играл</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- YouTube -->
     <div class="card">
       <div class="question">
         <label>Что вы смотрите на YouTube?</label>
         <div class="checkbox-group">
-          <label class="checkbox-option">
-            <input type="checkbox" name="youtube" value="watch">
-            <span>Смотрю YouTube</span>
-          </label>
-          <label class="checkbox-option">
-            <input type="checkbox" name="youtube" value="music">
-            <span>Слушаю музыку на YouTube</span>
-          </label>
+          <label class="checkbox-option"><input type="checkbox" name="youtube" value="watch"><span>Смотрю YouTube</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="youtube" value="music"><span>Слушаю музыку на YouTube</span></label>
         </div>
       </div>
     </div>
 
-    <!-- Короткие видео -->
     <div class="card">
       <div class="question">
         <label>Смотрите ли короткие видео?</label>
         <div class="checkbox-group">
-          <label class="checkbox-option">
-            <input type="checkbox" name="shortVideos" value="tiktok">
-            <span>TikTok</span>
-          </label>
-          <label class="checkbox-option">
-            <input type="checkbox" name="shortVideos" value="reels">
-            <span>Instagram Reels</span>
-          </label>
-          <label class="checkbox-option">
-            <input type="checkbox" name="shortVideos" value="shorts">
-            <span>YouTube Shorts</span>
-          </label>
+          <label class="checkbox-option"><input type="checkbox" name="shortVideos" value="tiktok"><span>TikTok</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="shortVideos" value="reels"><span>Instagram Reels</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="shortVideos" value="shorts"><span>YouTube Shorts</span></label>
         </div>
         <div class="conditional" id="shortVideosSlider">
           <div class="slider-container">
             <label>Как часто смотрите?</label>
             <input type="range" name="shortVideosFreq" min="0" max="5" value="0" class="slider">
-            <div class="slider-value" id="shortVideosValue">0</div>
-            <div class="slider-labels">
-              <span>Почти не смотрю</span>
-              <span>Постоянно</span>
-            </div>
+            <div class="slider-value" id="shortVideosValue">Почти не смотрю</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Игры -->
     <div class="card">
       <div class="question">
         <label>Играете в видеоигры?</label>
-        <label class="checkbox-option">
-          <input type="checkbox" name="playsGames" value="yes">
-          <span>Да, играю</span>
-        </label>
+        <label class="checkbox-option"><input type="checkbox" name="playsGames" value="yes"><span>Да, играю</span></label>
         <div class="conditional" id="gamesSlider">
           <div class="slider-container">
             <label>Как часто?</label>
             <input type="range" name="gamesFreq" min="0" max="5" value="0" class="slider">
-            <div class="slider-value" id="gamesValue">0</div>
-            <div class="slider-labels">
-              <span>Редко</span>
-              <span>Постоянно</span>
-            </div>
+            <div class="slider-value" id="gamesValue">Не играю</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Фильмы -->
     <div class="card">
       <div class="question">
         <label>Как часто смотрите фильмы?</label>
         <div class="slider-container">
           <input type="range" name="moviesFreq" min="0" max="3" value="1" class="slider">
-          <div class="slider-value" id="moviesValue">1</div>
-          <div class="slider-labels">
-            <span>Очень редко</span>
-            <span>Часто</span>
-          </div>
+          <div class="slider-value" id="moviesValue">Редко</div>
         </div>
       </div>
     </div>
 
-    <!-- Новая музыка -->
     <div class="card">
       <div class="question">
         <label>Как часто слушаете новую/незнакомую музыку?</label>
         <div class="radio-group">
-          <label class="radio-option">
-            <input type="radio" name="newMusic" value="never" required>
-            <span>Никогда</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="newMusic" value="month">
-            <span>Иногда в месяц</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="newMusic" value="week">
-            <span>Иногда в неделю</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="newMusic" value="often">
-            <span>Часто</span>
-          </label>
+          <label class="radio-option"><input type="radio" name="newMusic" value="never" required><span>Никогда</span></label>
+          <label class="radio-option"><input type="radio" name="newMusic" value="month"><span>Иногда в месяц</span></label>
+          <label class="radio-option"><input type="radio" name="newMusic" value="week"><span>Иногда в неделю</span></label>
+          <label class="radio-option"><input type="radio" name="newMusic" value="often"><span>Часто</span></label>
         </div>
       </div>
     </div>
 
-    <!-- Наушники -->
     <div class="card">
       <div class="question">
         <label>Используете наушники?</label>
         <div class="radio-group">
-          <label class="radio-option">
-            <input type="radio" name="headphones" value="yes" required>
-            <span>Да</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="headphones" value="no">
-            <span>Нет</span>
-          </label>
+          <label class="radio-option"><input type="radio" name="headphones" value="yes" required><span>Да</span></label>
+          <label class="radio-option"><input type="radio" name="headphones" value="no"><span>Нет</span></label>
         </div>
       </div>
     </div>
@@ -382,35 +149,27 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS612e5vnkHNAQCBdKXCj2EP_eVrNRnmA6iANvOeQhiQXoWhko78KSNjoGcQAX93yg/exec";
     
-    // Подсветка выбранных опций
     document.querySelectorAll('.radio-option input, .checkbox-option input').forEach(input => {
       input.addEventListener('change', function() {
         if (this.type === 'radio') {
-          this.closest('.radio-group').querySelectorAll('.radio-option').forEach(opt => {
-            opt.classList.remove('selected');
-          });
+          this.closest('.radio-group').querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
         }
         this.closest('label').classList.toggle('selected', this.checked);
       });
     });
 
-    // Образование - показать поле если "другое"
     document.querySelectorAll('input[name="education"]').forEach(radio => {
       radio.addEventListener('change', function() {
-        const otherField = document.getElementById('educationOther');
-        otherField.classList.toggle('show', this.value === 'other');
+        document.getElementById('educationOther').classList.toggle('show', this.value === 'other');
       });
     });
 
-    // Инструменты - показать детали если "да"
     document.querySelectorAll('input[name="playsInstrument"]').forEach(radio => {
       radio.addEventListener('change', function() {
-        const details = document.getElementById('instrumentDetails');
-        details.classList.toggle('show', this.value === 'yes');
+        document.getElementById('instrumentDetails').classList.toggle('show', this.value === 'yes');
       });
     });
 
-    // Короткие видео - показать слайдер если есть галочки
     document.querySelectorAll('input[name="shortVideos"]').forEach(checkbox => {
       checkbox.addEventListener('change', function() {
         const anyChecked = Array.from(document.querySelectorAll('input[name="shortVideos"]')).some(cb => cb.checked);
@@ -418,74 +177,23 @@
       });
     });
 
-    // Игры - показать слайдер если галочка
     document.querySelector('input[name="playsGames"]').addEventListener('change', function() {
       document.getElementById('gamesSlider').classList.toggle('show', this.checked);
     });
 
-    // Слайдеры - обновление значений
-    const sliders = [
-      { id: 'instrumentActivity', display: 'instrumentValue' },
-      { id: 'shortVideosFreq', display: 'shortVideosValue' },
-      { id: 'gamesFreq', display: 'gamesValue' },
-      { id: 'moviesFreq', display: 'moviesValue' }
-    ];
-    // Слайдеры - обновление значений с текстом
-    const sliderConfigs = {
-    instrumentActivity: [
-        'Никогда не играл',
-        'Мало играл раньше, сейчас не играю',
-        'Играл мало, но играю сейчас мало',
-        'Музицирую иногда',
-        'Играю регулярно',
-        'Сочиняю'
-    ],
-    shortVideosFreq: [
-        'Почти не смотрю',
-        'Редко',
-        'Иногда',
-        'Часто',
-        'Очень часто',
-        'Постоянно'
-    ],
-    gamesFreq: [
-        'Не играю',
-        'Очень редко',
-        'Редко',
-        'Иногда',
-        'Часто',
-        'Постоянно'
-    ],
-    moviesFreq: [
-        'Очень редко',
-        'Редко',
-        'Иногда',
-        'Часто'
-    ]
+    const sliderLabels = {
+      instrumentActivity: ['Никогда не играл', 'Мало играл раньше, сейчас не играю', 'Играл мало, но играю сейчас мало', 'Музицирую иногда', 'Играю регулярно', 'Сочиняю'],
+      shortVideosFreq: ['Почти не смотрю', 'Редко', 'Иногда', 'Часто', 'Очень часто', 'Постоянно'],
+      gamesFreq: ['Не играю', 'Очень редко', 'Редко', 'Иногда', 'Часто', 'Постоянно'],
+      moviesFreq: ['Очень редко', 'Редко', 'Иногда', 'Часто']
     };
 
-    Object.keys(sliderConfigs).forEach(sliderName => {
-    const input = document.querySelector(`input[name="${sliderName}"]`);
-    const display = document.getElementById(sliderName.replace('Freq', 'Value').replace('Activity', 'Value'));
-    const labels = sliderConfigs[sliderName];
-    
-    input.addEventListener('input', function() {
-        display.textContent = labels[this.value];
-    });
-    
-    // Инициализация
-    display.textContent = labels[input.value];
+    Object.keys(sliderLabels).forEach(name => {
+      const input = document.querySelector(`input[name="${name}"]`);
+      const display = document.getElementById(name.replace('Freq', 'Value').replace('Activity', 'Value'));
+      input.addEventListener('input', function() { display.textContent = sliderLabels[name][this.value]; });
     });
 
-    sliders.forEach(slider => {
-      const input = document.querySelector(`input[name="${slider.id}"]`);
-      const display = document.getElementById(slider.display);
-      input.addEventListener('input', function() {
-        display.textContent = this.value;
-      });
-    });
-
-    // Отправка формы
     document.getElementById('surveyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -511,12 +219,8 @@
       };
       
       try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify(data)
-        });
-        
-        alert('✅ Анкета отправлена! Теперь пройдите тест.');
+        await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) });
+        alert('✅ Анкета отправлена!');
         window.location.href = 'index.html';
       } catch (err) {
         alert('Ошибка: ' + err.message);
