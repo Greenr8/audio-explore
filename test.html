@@ -22,19 +22,15 @@
     </div>
     <div id="instructionScreen" style="display:none; max-width:600px; margin:0 auto; padding:20px;">
       <h2 style="color:#2c3e50;">Инструкция</h2>
-      
       <div style="background:#fff3cd; border-left:4px solid #ffc107; padding:15px; margin:20px 0; border-radius:4px;">
         <strong>⚠️ Важно:</strong> После теста не забудьте заполнить анкету (если еще не заполнили)
       </div>
-      
       <div style="background:#f8d7da; border-left:4px solid #dc3545; padding:15px; margin:20px 0; border-radius:4px;">
         <strong>⚠️ Внимание:</strong> Тест очень капризен к разрешениям в браузере/телефоне. Если у браузера нет разрешения на запись звука или микрофон не подключен - записать вашу речь не получится.
       </div>
-      
       <div style="background:#d1ecf1; border-left:4px solid #17a2b8; padding:15px; margin:20px 0; border-radius:4px;">
         <strong>📝 Задание:</strong> В ответе нужно написать ваше отношение к тексту.
       </div>
-      
       <button id="startTestBtn" style="width:100%; padding:18px; font-size:18px; background:#27ae60; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:20px;">Начать тест</button>
     </div>
     <div id="loadingMsg" style="display:none; text-align:center; margin-top:30px;">Загрузка...</div>
@@ -70,12 +66,14 @@
   </div>
 
   <script>
-    // ВСТАВЬ СВОЙ URL APPS SCRIPT (он уже правильный)
+    // Твой рабочий Apps Script
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS612e5vnkHNAQCBdKXCj2EP_eVrNRnmA6iANvOeQhiQXoWhko78KSNjoGcQAX93yg/exec";
     const REPO_NAME = 'audio-explore';
 
-    let stimuliOrder = [];
-    let currentIndex = 0;
+    // Количество раундов (измени, если надо)
+    const TOTAL_ROUNDS = 10;
+
+    let currentRound = 0;          // вместо currentIndex
     let currentStimulusId = null;
     let sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     let participantName = "";
@@ -112,37 +110,13 @@
     document.getElementById('startTestBtn').addEventListener('click', async () => {
       document.getElementById('instructionScreen').style.display = 'none';
       loadingMsg.style.display = 'block';
-      await initTest();
+      currentRound = 0;
+      await loadNext();
     });
 
-    async function initTest() {
-      try {
-        const resp = await fetch(SCRIPT_URL + '?action=count');
-        const data = await resp.json();
-        const total = data.total;
-        if (!total) { 
-          alert('Нет стимулов в таблице.'); 
-          loadingMsg.style.display = 'none'; 
-          welcomeScreen.style.display = 'block'; 
-          return; 
-        }
-        
-        stimuliOrder = Array.from({length: total}, (_, i) => i);
-        for (let i = stimuliOrder.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [stimuliOrder[i], stimuliOrder[j]] = [stimuliOrder[j], stimuliOrder[i]];
-        }
-        currentIndex = 0;
-        await loadNext();
-      } catch(e) {
-        alert('Ошибка инициализации: ' + e.message);
-        loadingMsg.style.display = 'none';
-        welcomeScreen.style.display = 'block';
-      }
-    }
-
+    // Загрузка одного раунда (случайный текст + случайное аудио)
     async function loadNext() {
-      if (currentIndex >= stimuliOrder.length) {
+      if (currentRound >= TOTAL_ROUNDS) {
         loadingMsg.style.display = 'none';
         stimulusArea.style.display = 'none';
         doneMsg.style.display = 'block';
@@ -151,21 +125,30 @@
       loadingMsg.style.display = 'block';
       stimulusArea.style.display = 'none';
 
-      const index = stimuliOrder[currentIndex];
       try {
-        const resp = await fetch(SCRIPT_URL + '?action=getItem&index=' + index);
-        const data = await resp.json();
-        if (data.done) { 
-          loadingMsg.style.display = 'none'; 
-          doneMsg.style.display = 'block'; 
-          return; 
+        // Запрашиваем случайный текст и случайное аудио одновременно
+        const [textResp, audioResp] = await Promise.all([
+          fetch(SCRIPT_URL + '?action=randomText'),
+          fetch(SCRIPT_URL + '?action=randomAudio')
+        ]);
+        const textData = await textResp.json();
+        const audioData = await audioResp.json();
+
+        if (textData.error || audioData.error) {
+          alert('Ошибка получения стимулов: проверьте листы Texts и Audios в таблице');
+          loadingMsg.style.display = 'none';
+          doneMsg.style.display = 'block';
+          return;
         }
-        
-        currentStimulusId = data.id;
-        stimulusText.textContent = data.text;
-        
-        if (data.audioFile) {
-          audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + data.audioFile;
+
+        const textValue = textData.value;
+        const audioValue = audioData.value;
+        currentStimulusId = 'mix_' + currentRound; // идентификатор для записи
+
+        stimulusText.textContent = textValue;
+
+        if (audioValue) {
+          audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + audioValue;
           stimulusAudio.load();
           stimulusAudio.style.display = 'block';
           playBtn.style.display = 'none';
@@ -177,7 +160,7 @@
           stimulusAudio.style.display = 'none';
           playBtn.style.display = 'none';
         }
-        
+
         textResponse.value = '';
         recordedBlob = null;
         playRecordBtn.disabled = true;
@@ -206,24 +189,16 @@
           recordStatus.textContent = '❌ Браузер не поддерживает запись';
           return;
         }
-        
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         recordStatus.textContent = '🎤 Идёт запись...';
-        
-        // Определяем поддерживаемый формат
         let mimeType = 'audio/webm';
         if (!MediaRecorder.isTypeSupported('audio/webm')) {
           mimeType = 'audio/mp4';
         }
         currentMimeType = mimeType;
-        
         mediaRecorder = new MediaRecorder(mediaStream, { mimeType: mimeType });
         audioChunks = [];
-        
-        mediaRecorder.ondataavailable = e => { 
-          if (e.data.size > 0) audioChunks.push(e.data); 
-        };
-        
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
         mediaRecorder.onstop = () => {
           recordedBlob = new Blob(audioChunks, { type: mimeType });
           recordBtn.disabled = false;
@@ -233,13 +208,11 @@
           recordStatus.textContent = '✅ Запись готова (' + (recordedBlob.size / 1024).toFixed(1) + ' KB)';
           if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
         };
-        
         mediaRecorder.start();
         recordBtn.disabled = true;
         stopRecordBtn.disabled = false;
         playRecordBtn.disabled = true;
         clearRecordBtn.disabled = true;
-        
       } catch (err) {
         console.error('Ошибка микрофона:', err);
         if (err.name === 'NotAllowedError') {
@@ -285,29 +258,19 @@
     nextBtn.addEventListener('click', async () => {
       if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
-        // Ждем 500мс, чтобы браузер успел собрать аудио в recordedBlob
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       const txt = textResponse.value.trim();
       let audioBase64 = null;
       if (recordedBlob) {
-        try { 
-          audioBase64 = await blobToBase64(recordedBlob); 
-        } catch(e) { 
-          console.error(e); 
-        }
+        try { audioBase64 = await blobToBase64(recordedBlob); } catch(e) { console.error(e); }
       }
-      
       nextBtn.disabled = true;
       nextBtn.textContent = 'Отправка...';
-      
       try {
-        // ВАЖНО: Content-Type: text/plain чтобы обойти CORS
         await fetch(SCRIPT_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
-          },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: 'submit',
             stimulusId: currentStimulusId,
@@ -318,7 +281,7 @@
             sessionId: sessionId
           })
         });
-        currentIndex++;
+        currentRound++;
         await loadNext();
       } catch (e) {
         alert('Ошибка отправки: ' + e.message);
