@@ -28,6 +28,7 @@
       <audio id="stimulusAudio" controls style="width:100%; margin:15px 0;">
         <source id="audioSource" src="" type="audio/mpeg">
       </audio>
+      <button id="playBtn" style="display:none;">▶ Воспроизвести снова</button>
       
       <div style="margin-top: 20px;">
         <label><strong>Ваш ответ текстом:</strong></label>
@@ -36,10 +37,10 @@
 
       <div class="record-section">
         <p style="margin: 0 0 10px 0;"><strong>Запись голоса:</strong></p>
-        <button id="recordBtn"> Начать запись</button>
+        <button id="recordBtn">🎤 Начать запись</button>
         <button id="stopRecordBtn" disabled>⏹ Стоп</button>
         <button id="playRecordBtn" disabled>▶ Прослушать</button>
-        <button id="clearRecordBtn" disabled> Очистить</button>
+        <button id="clearRecordBtn" disabled>🗑 Очистить</button>
         <p id="recordStatus" style="margin: 10px 0 0 0; color: #555;"></p>
       </div>
 
@@ -53,7 +54,7 @@
   </div>
 
   <script>
-    // ВСТАВЬ СЮДА СВОЙ URL APPS SCRIPT
+    // ВСТАВЬ СВОЙ URL APPS SCRIPT (он уже правильный)
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS612e5vnkHNAQCBdKXCj2EP_eVrNRnmA6iANvOeQhiQXoWhko78KSNjoGcQAX93yg/exec";
     const REPO_NAME = 'audio-explore';
 
@@ -66,6 +67,7 @@
     let audioChunks = [];
     let recordedBlob = null;
     let mediaStream = null;
+    let currentMimeType = 'audio/webm';
 
     const welcomeScreen = document.getElementById('welcomeScreen');
     const loadingMsg = document.getElementById('loadingMsg');
@@ -77,6 +79,7 @@
     const stimulusText = document.getElementById('stimulusText');
     const stimulusAudio = document.getElementById('stimulusAudio');
     const audioSource = document.getElementById('audioSource');
+    const playBtn = document.getElementById('playBtn');
     const textResponse = document.getElementById('textResponse');
     const recordBtn = document.getElementById('recordBtn');
     const stopRecordBtn = document.getElementById('stopRecordBtn');
@@ -96,7 +99,12 @@
         const resp = await fetch(SCRIPT_URL + '?action=count');
         const data = await resp.json();
         const total = data.total;
-        if (!total) { alert('Нет стимулов в таблице.'); loadingMsg.style.display = 'none'; welcomeScreen.style.display = 'block'; return; }
+        if (!total) { 
+          alert('Нет стимулов в таблице.'); 
+          loadingMsg.style.display = 'none'; 
+          welcomeScreen.style.display = 'block'; 
+          return; 
+        }
         
         stimuliOrder = Array.from({length: total}, (_, i) => i);
         for (let i = stimuliOrder.length - 1; i > 0; i--) {
@@ -126,7 +134,11 @@
       try {
         const resp = await fetch(SCRIPT_URL + '?action=getItem&index=' + index);
         const data = await resp.json();
-        if (data.done) { loadingMsg.style.display = 'none'; doneMsg.style.display = 'block'; return; }
+        if (data.done) { 
+          loadingMsg.style.display = 'none'; 
+          doneMsg.style.display = 'block'; 
+          return; 
+        }
         
         currentStimulusId = data.id;
         stimulusText.textContent = data.text;
@@ -135,9 +147,14 @@
           audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + data.audioFile;
           stimulusAudio.load();
           stimulusAudio.style.display = 'block';
-          stimulusAudio.play().catch(e => console.log('Автоплей заблокирован'));
+          playBtn.style.display = 'none';
+          stimulusAudio.play().catch(e => {
+            console.log('Автоплей заблокирован');
+            playBtn.style.display = 'inline-block';
+          });
         } else {
           stimulusAudio.style.display = 'none';
+          playBtn.style.display = 'none';
         }
         
         textResponse.value = '';
@@ -157,6 +174,11 @@
       }
     }
 
+    playBtn.addEventListener('click', () => {
+      stimulusAudio.currentTime = 0;
+      stimulusAudio.play().catch(e => alert('Не удалось воспроизвести: ' + e.message));
+    });
+
     recordBtn.addEventListener('click', async () => {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -165,15 +187,24 @@
         }
         
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        recordStatus.textContent = ' Идёт запись...';
+        recordStatus.textContent = '🎤 Идёт запись...';
         
-        mediaRecorder = new MediaRecorder(mediaStream);
+        // Определяем поддерживаемый формат
+        let mimeType = 'audio/webm';
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/mp4';
+        }
+        currentMimeType = mimeType;
+        
+        mediaRecorder = new MediaRecorder(mediaStream, { mimeType: mimeType });
         audioChunks = [];
         
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.ondataavailable = e => { 
+          if (e.data.size > 0) audioChunks.push(e.data); 
+        };
         
         mediaRecorder.onstop = () => {
-          recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          recordedBlob = new Blob(audioChunks, { type: mimeType });
           recordBtn.disabled = false;
           stopRecordBtn.disabled = true;
           playRecordBtn.disabled = false;
@@ -201,7 +232,9 @@
     });
 
     stopRecordBtn.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
     });
 
     playRecordBtn.addEventListener('click', () => {
@@ -232,20 +265,29 @@
       const txt = textResponse.value.trim();
       let audioBase64 = null;
       if (recordedBlob) {
-        try { audioBase64 = await blobToBase64(recordedBlob); } catch(e) { console.error(e); }
+        try { 
+          audioBase64 = await blobToBase64(recordedBlob); 
+        } catch(e) { 
+          console.error(e); 
+        }
       }
       
       nextBtn.disabled = true;
       nextBtn.textContent = 'Отправка...';
       
       try {
+        // ВАЖНО: Content-Type: text/plain чтобы обойти CORS
         await fetch(SCRIPT_URL, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
           body: JSON.stringify({
             action: 'submit',
             stimulusId: currentStimulusId,
             textResponse: txt,
             audioData: audioBase64,
+            mimeType: currentMimeType,
             participantName: participantName,
             sessionId: sessionId
           })
@@ -254,6 +296,7 @@
         await loadNext();
       } catch (e) {
         alert('Ошибка отправки: ' + e.message);
+      } finally {
         nextBtn.disabled = false;
         nextBtn.textContent = 'Далее →';
       }
