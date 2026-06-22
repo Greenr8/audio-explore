@@ -130,21 +130,11 @@
 
     function sendFullTestAudio(blob) {
       if (!blob || blob.size === 0) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result.split(',')[1];
-        fetch(SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'submitFullTestAudio',
-            audioData: base64,
-            sessionId: sessionId
-          }),
-          keepalive: true
-        }).catch(() => console.error('Не удалось отправить общую запись'));
-      };
-      reader.readAsDataURL(blob);
+      const formData = new FormData();
+      formData.append('action', 'submitFullTestAudio');
+      formData.append('sessionId', sessionId);
+      formData.append('audioData', blob, 'full_test_' + sessionId + '_' + Date.now() + '.webm');
+      navigator.sendBeacon(SCRIPT_URL, formData);
     }
     function stopFullTestRecording() {
       if (fullTestRecorder && fullTestRecorder.state !== 'inactive') {
