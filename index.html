@@ -3,21 +3,319 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Выбор раздела</title>
+  <title>Музыкальный тест</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 0 15px; text-align: center; }
-    h1 { color: #333; }
-    .menu-btn { display: block; width: 100%; padding: 20px; margin: 20px 0; font-size: 20px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; }
-    .menu-btn:hover { background: #45a049; }
-    .menu-btn.secondary { background: #2196F3; }
-    .menu-btn.secondary:hover { background: #0b7dda; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 0 15px; }
+    button { padding: 12px 20px; font-size: 16px; margin: 5px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    textarea { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 5px; }
+    .record-section { margin: 15px 0; padding: 10px; background: #f0f0f0; border-radius: 6px; }
+    #stimulusText { font-weight: bold; font-size: 18px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <h1>Музыкальное исследование</h1>
-  <p>Выберите раздел:</p>
-  <a href="survey.html" class="menu-btn secondary">📋 Анкета</a>
-  <a href="test.html" class="menu-btn">🎵 Музыкальный тест</a>
-  <p style="color: #666; font-size: 14px; margin-top: 40px;">пройдите тест, заполните анкету. ждите новых тестов :)</p>
+  <div id="testContainer">
+    <div id="welcomeScreen">
+      <h2>Музыкальный тест</h2>
+      <input type="text" id="participantName" placeholder="Ваше имя" style="width:100%; padding:8px; margin-bottom:10px; box-sizing: border-box;">
+      <button id="startBtn">Начать тест</button>
+    </div>
+    <div id="instructionScreen" style="display:none; max-width:600px; margin:0 auto; padding:20px;">
+      <h2 style="color:#2c3e50;">Инструкция</h2>
+      <div style="background:#fff3cd; border-left:4px solid #ffc107; padding:15px; margin:20px 0; border-radius:4px;">
+        <strong>⚠️ Важно:</strong> После теста не забудьте заполнить анкету (если еще не заполнили)
+      </div>
+      <div style="background:#f8d7da; border-left:4px solid #dc3545; padding:15px; margin:20px 0; border-radius:4px;">
+        <strong>⚠️ Внимание:</strong> Тест очень капризен к разрешениям в браузере/телефоне. Если у браузера нет разрешения на запись звука или микрофон не подключен - записать вашу речь не получится.
+      </div>
+      <div style="background:#d1ecf1; border-left:4px solid #17a2b8; padding:15px; margin:20px 0; border-radius:4px;">
+        <strong>📝 Задание:</strong> ВНИМАНИЕ. пожалуйста если  у  вас работает микрофон, все ответы заполните вслух:) передкаждым ответом вслух нажимать записать
+      </div>
+      <button id="startTestBtn" style="width:100%; padding:18px; font-size:18px; background:#27ae60; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:20px;">Начать тест</button>
+    </div>
+    <div id="loadingMsg" style="display:none; text-align:center; margin-top:30px;">Загрузка...</div>
+
+    <div id="stimulusArea" style="display:none;">
+      <p id="stimulusText"></p>
+      <audio id="stimulusAudio" controls style="width:100%; margin:15px 0;">
+        <source id="audioSource" src="" type="audio/mpeg">
+      </audio>
+      <button id="playBtn" style="display:none;">▶ Воспроизвести снова</button>
+      
+      <div style="margin-top: 20px;">
+        <label><strong>Текст нейтральный? расскажите:</strong></label>
+        <textarea id="textResponse" rows="3"></textarea>
+      </div>
+
+      <div class="record-section">
+        <p style="margin: 0 0 10px 0;"><strong>Запись голоса:</strong></p>
+        <button id="recordBtn">🎤 Начать запись</button>
+        <button id="stopRecordBtn" disabled>⏹ Стоп</button>
+        <button id="playRecordBtn" disabled>▶ Прослушать</button>
+        <button id="clearRecordBtn" disabled>🗑 Очистить</button>
+        <p id="recordStatus" style="margin: 10px 0 0 0; color: #555;"></p>
+      </div>
+
+      <button id="nextBtn" style="width: 100%; margin-top: 15px;">Далее →</button>
+    </div>
+
+    <div id="doneMsg" style="display:none; text-align:center;">
+      <h2>✅ Тест завершён!</h2>
+      <p>Спасибо за участие!</p>
+    </div>
+  </div>
+
+  <script>
+    // Твой рабочий Apps Script
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS612e5vnkHNAQCBdKXCj2EP_eVrNRnmA6iANvOeQhiQXoWhko78KSNjoGcQAX93yg/exec";
+    const REPO_NAME = 'audio-explore';
+
+    // Основные переменные теста
+    let currentRound = 0;
+    let currentStimulusId = null;
+    let sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    let participantName = "";
+    let currentTextValue = null;
+    let currentAudioValue = null;
+    let textsList = [];
+    let audiosList = [];
+
+    // Переменные для ПОЛНОЙ записи теста
+    let fullTestRecorder = null;
+    let fullTestChunks = [];
+    let fullTestStream = null;
+    let isFullTestRecording = false;
+
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const loadingMsg = document.getElementById('loadingMsg');
+    const stimulusArea = document.getElementById('stimulusArea');
+    const doneMsg = document.getElementById('doneMsg');
+    const startBtn = document.getElementById('startBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const participantNameInput = document.getElementById('participantName');
+    const stimulusText = document.getElementById('stimulusText');
+    const stimulusAudio = document.getElementById('stimulusAudio');
+    const audioSource = document.getElementById('audioSource');
+    const playBtn = document.getElementById('playBtn');
+    const textResponse = document.getElementById('textResponse');
+    const recordBtn = document.getElementById('recordBtn');
+    const stopRecordBtn = document.getElementById('stopRecordBtn');
+    const playRecordBtn = document.getElementById('playRecordBtn');
+    const clearRecordBtn = document.getElementById('clearRecordBtn');
+    const recordStatus = document.getElementById('recordStatus');
+
+    // --- Полная запись теста ---
+    async function startFullTestRecording() {
+      try {
+        fullTestStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        fullTestRecorder = new MediaRecorder(fullTestStream, { mimeType: 'audio/webm' });
+        fullTestChunks = [];
+        fullTestRecorder.ondataavailable = e => { if (e.data.size > 0) fullTestChunks.push(e.data); };
+        fullTestRecorder.onstop = () => {
+          const blob = new Blob(fullTestChunks, { type: 'audio/webm' });
+          // Отправляем через sendBeacon, если страница ещё жива
+          sendFullTestAudio(blob);
+        };
+        fullTestRecorder.start();
+        isFullTestRecording = true;
+
+        // При уходе со страницы останавливаем запись
+        window.addEventListener('beforeunload', stopFullTestRecording);
+      } catch (e) {
+        alert('Не удалось начать общую запись теста: ' + e.message);
+      }
+    }
+
+    function sendFullTestAudio(blob) {
+      if (!blob || blob.size === 0) return;
+      const formData = new FormData();
+      formData.append('audioData', blob, 'full_test_' + sessionId + '_' + Date.now() + '.webm');
+      formData.append('action', 'submitFullTestAudio');
+      formData.append('sessionId', sessionId);
+      
+      // Используем sendBeacon, если браузер поддерживает, иначе fetch
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(SCRIPT_URL, formData);
+      } else {
+        fetch(SCRIPT_URL, { method: 'POST', body: formData, keepalive: true }).catch(() => {});
+      }
+    }
+    function stopFullTestRecording() {
+      if (fullTestRecorder && fullTestRecorder.state !== 'inactive') {
+        fullTestRecorder.stop();
+        fullTestStream.getTracks().forEach(t => t.stop());
+        isFullTestRecording = false;
+      }
+    }
+
+    // Звуковая метка (короткий тон) – вставляется при каждом новом вопросе
+    function insertTimeMarker() {
+      if (!isFullTestRecording) return;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.frequency.value = 1000;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.1;
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+
+    // --- Обработчики старта ---
+    startBtn.addEventListener('click', async () => {
+      participantName = participantNameInput.value.trim() || 'Аноним';
+      welcomeScreen.style.display = 'none';
+      document.getElementById('instructionScreen').style.display = 'block';
+    });
+
+    document.getElementById('startTestBtn').addEventListener('click', async () => {
+      document.getElementById('instructionScreen').style.display = 'none';
+      await startFullTestRecording();          // <-- запускаем общий диктофон
+      loadingMsg.style.display = 'block';
+      await startTestWithLists();
+    });
+
+    // --- Загрузка и показ стимулов без повторов ---
+    async function startTestWithLists() {
+      try {
+        const resp = await fetch(SCRIPT_URL + '?action=getStimuliLists');
+        const data = await resp.json();
+        if (data.error) {
+          alert('Ошибка: ' + data.error);
+          loadingMsg.style.display = 'none';
+          welcomeScreen.style.display = 'block';
+          stopFullTestRecording();
+          return;
+        }
+        textsList = data.texts;
+        audiosList = data.audios;
+        if (textsList.length === 0 || audiosList.length === 0) {
+          alert('Нет текстов или аудио в таблице.');
+          loadingMsg.style.display = 'none';
+          welcomeScreen.style.display = 'block';
+          stopFullTestRecording();
+          return;
+        }
+        currentRound = 0;
+        await loadNextFromLists();
+      } catch (e) {
+        alert('Ошибка загрузки списков: ' + e.message);
+        loadingMsg.style.display = 'none';
+        welcomeScreen.style.display = 'block';
+        stopFullTestRecording();
+      }
+    }
+
+    async function loadNextFromLists() {
+      if (currentRound >= textsList.length || currentRound >= audiosList.length) {
+        loadingMsg.style.display = 'none';
+        stimulusArea.style.display = 'none';
+        doneMsg.style.display = 'block';
+        stopFullTestRecording();   // завершаем общую запись
+        return;
+      }
+      loadingMsg.style.display = 'block';
+      stimulusArea.style.display = 'none';
+
+      // Вставляем метку в общую запись
+      //insertTimeMarker();
+
+      currentTextValue = textsList[currentRound];
+      currentAudioValue = audiosList[currentRound];
+      currentStimulusId = 'mix_' + currentRound;
+
+      stimulusText.textContent = currentTextValue;
+
+      if (currentAudioValue) {
+        audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + currentAudioValue;
+        stimulusAudio.load();
+        stimulusAudio.style.display = 'block';
+        playBtn.style.display = 'none';
+        stimulusAudio.play().catch(e => {
+          console.log('Автоплей заблокирован');
+          playBtn.style.display = 'inline-block';
+        });
+      } else {
+        stimulusAudio.style.display = 'none';
+        playBtn.style.display = 'none';
+      }
+
+      textResponse.value = '';
+      playRecordBtn.disabled = true;
+      clearRecordBtn.disabled = true;
+      recordBtn.disabled = false;
+      stopRecordBtn.disabled = true;
+      recordStatus.textContent = '';
+
+      loadingMsg.style.display = 'none';
+      stimulusArea.style.display = 'block';
+    }
+
+    // --- Обработчики записи отдельного ответа ---
+    playBtn.addEventListener('click', () => {
+      stimulusAudio.currentTime = 0;
+      stimulusAudio.play().catch(e => alert('Не удалось воспроизвести: ' + e.message));
+    });
+
+    // Заглушки кнопок – только визуальное напоминание
+    recordBtn.addEventListener('click', () => {
+      recordStatus.textContent = '🎤 Идёт общая запись всего теста. Просто говорите вслух.';
+      recordBtn.disabled = true;
+      stopRecordBtn.disabled = false;
+      // Через 3 секунды кнопки возвращаются в исходное состояние
+      setTimeout(() => {
+        recordBtn.disabled = false;
+        stopRecordBtn.disabled = true;
+        recordStatus.textContent = '';
+      }, 3000);
+    });
+
+    stopRecordBtn.addEventListener('click', () => {
+      recordStatus.textContent = 'Остановка невозможна – запись автоматическая.';
+      stopRecordBtn.disabled = true;
+      recordBtn.disabled = false;
+    });
+
+    playRecordBtn.addEventListener('click', () => {
+      recordStatus.textContent = 'Прослушать можно только после теста в общей записи.';
+    });
+
+    clearRecordBtn.addEventListener('click', () => {
+      recordStatus.textContent = 'Очистка невозможна – запись автоматическая.';
+    });
+
+    // --- Отправка ответа и переход к следующему ---
+    nextBtn.addEventListener('click', async () => {
+      const txt = textResponse.value.trim();
+      
+      nextBtn.disabled = true;
+      nextBtn.textContent = 'Отправка...';
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'submit',
+            stimulusId: currentStimulusId,
+            textResponse: txt,
+            audioData: null, // Отправляем null, так как запись идет общая
+            participantName: participantName,
+            sessionId: sessionId,
+            textValue: currentTextValue,
+            audioValue: currentAudioValue
+          })
+        });
+        currentRound++;
+        await loadNextFromLists();
+      } catch (e) {
+        alert('Ошибка отправки: ' + e.message);
+      } finally {
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'Далее →';
+      }
+    });
+  </script>
 </body>
 </html>
