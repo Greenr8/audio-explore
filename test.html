@@ -29,7 +29,7 @@
         <strong>⚠️ Внимание:</strong> Тест очень капризен к разрешениям в браузере/телефоне. Если у браузера нет разрешения на запись звука или микрофон не подключен - записать вашу речь не получится.
       </div>
       <div style="background:#d1ecf1; border-left:4px solid #17a2b8; padding:15px; margin:20px 0; border-radius:4px;">
-        <strong>📝 Задание:</strong> В ответе нужно будет написать ваше отношение к условно нейтральному тексту.
+        <strong>📝 Задание:</strong> ВНИМАНИЕ. первые 4 ответа желательно записать текстом , дальше голосом
       </div>
       <button id="startTestBtn" style="width:100%; padding:18px; font-size:18px; background:#27ae60; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:20px;">Начать тест</button>
     </div>
@@ -70,10 +70,8 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS612e5vnkHNAQCBdKXCj2EP_eVrNRnmA6iANvOeQhiQXoWhko78KSNjoGcQAX93yg/exec";
     const REPO_NAME = 'audio-explore';
 
-    // Количество раундов (измени, если надо)
-    const TOTAL_ROUNDS = 10;
-
-    let currentRound = 0;          // вместо currentIndex
+    // Основные переменные теста
+    let currentRound = 0;
     let currentStimulusId = null;
     let sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     let participantName = "";
@@ -84,6 +82,14 @@
     let currentMimeType = 'audio/webm';
     let currentTextValue = null;
     let currentAudioValue = null;
+    let textsList = [];
+    let audiosList = [];
+
+    // Переменные для ПОЛНОЙ записи теста
+    let fullTestRecorder = null;
+    let fullTestChunks = [];
+    let fullTestStream = null;
+    let isFullTestRecording = false;
 
     const welcomeScreen = document.getElementById('welcomeScreen');
     const loadingMsg = document.getElementById('loadingMsg');
@@ -103,96 +109,152 @@
     const clearRecordBtn = document.getElementById('clearRecordBtn');
     const recordStatus = document.getElementById('recordStatus');
 
+    // --- Полная запись теста ---
+    async function startFullTestRecording() {
+      try {
+        fullTestStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        fullTestRecorder = new MediaRecorder(fullTestStream, { mimeType: 'audio/webm' });
+        fullTestChunks = [];
+        fullTestRecorder.ondataavailable = e => { if (e.data.size > 0) fullTestChunks.push(e.data); };
+        fullTestRecorder.onstop = async () => {
+          const blob = new Blob(fullTestChunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const base64 = reader.result.split(',')[1];
+            await fetch(SCRIPT_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'submitFullTestAudio',
+                audioData: base64,
+                sessionId: sessionId
+              })
+            });
+          };
+          reader.readAsDataURL(blob);
+        };
+        fullTestRecorder.start();
+        isFullTestRecording = true;
+      } catch (e) {
+        alert('Не удалось начать общую запись теста: ' + e.message);
+      }
+    }
+
+    function stopFullTestRecording() {
+      if (fullTestRecorder && fullTestRecorder.state !== 'inactive') {
+        fullTestRecorder.stop();
+        fullTestStream.getTracks().forEach(t => t.stop());
+        isFullTestRecording = false;
+      }
+    }
+
+    // Звуковая метка (короткий тон) – вставляется при каждом новом вопросе
+    function insertTimeMarker() {
+      if (!isFullTestRecording) return;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.frequency.value = 1000;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.1;
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+
+    // --- Обработчики старта ---
     startBtn.addEventListener('click', async () => {
       participantName = participantNameInput.value.trim() || 'Аноним';
       welcomeScreen.style.display = 'none';
       document.getElementById('instructionScreen').style.display = 'block';
     });
 
-// Новый обработчик кнопки "Начать тест" (без повторов)
-document.getElementById('startTestBtn').addEventListener('click', async () => {
-  document.getElementById('instructionScreen').style.display = 'none';
-  await startTestWithLists();
-});
+    document.getElementById('startTestBtn').addEventListener('click', async () => {
+      document.getElementById('instructionScreen').style.display = 'none';
+      await startFullTestRecording();          // <-- запускаем общий диктофон
+      loadingMsg.style.display = 'block';
+      await startTestWithLists();
+    });
 
-// Глобальные переменные для хранения списков
-let textsList = [];
-let audiosList = [];
-
-async function startTestWithLists() {
-  loadingMsg.style.display = 'block';
-  try {
-    const resp = await fetch(SCRIPT_URL + '?action=getStimuliLists');
-    const data = await resp.json();
-    if (data.error) {
-      alert('Ошибка: ' + data.error);
-      loadingMsg.style.display = 'none';
-      welcomeScreen.style.display = 'block';
-      return;
+    // --- Загрузка и показ стимулов без повторов ---
+    async function startTestWithLists() {
+      try {
+        const resp = await fetch(SCRIPT_URL + '?action=getStimuliLists');
+        const data = await resp.json();
+        if (data.error) {
+          alert('Ошибка: ' + data.error);
+          loadingMsg.style.display = 'none';
+          welcomeScreen.style.display = 'block';
+          stopFullTestRecording();
+          return;
+        }
+        textsList = data.texts;
+        audiosList = data.audios;
+        if (textsList.length === 0 || audiosList.length === 0) {
+          alert('Нет текстов или аудио в таблице.');
+          loadingMsg.style.display = 'none';
+          welcomeScreen.style.display = 'block';
+          stopFullTestRecording();
+          return;
+        }
+        currentRound = 0;
+        await loadNextFromLists();
+      } catch (e) {
+        alert('Ошибка загрузки списков: ' + e.message);
+        loadingMsg.style.display = 'none';
+        welcomeScreen.style.display = 'block';
+        stopFullTestRecording();
+      }
     }
-    textsList = data.texts;
-    audiosList = data.audios;
-    if (textsList.length === 0 || audiosList.length === 0) {
-      alert('Нет текстов или аудио в таблице.');
-      loadingMsg.style.display = 'none';
-      welcomeScreen.style.display = 'block';
-      return;
-    }
-    currentRound = 0;
-    await loadNextFromLists();
-  } catch (e) {
-    alert('Ошибка загрузки списков: ' + e.message);
-    loadingMsg.style.display = 'none';
-    welcomeScreen.style.display = 'block';
-  }
-  }
 
-  async function loadNextFromLists() {
-    if (currentRound >= textsList.length || currentRound >= audiosList.length) {
-      loadingMsg.style.display = 'none';
+    async function loadNextFromLists() {
+      if (currentRound >= textsList.length || currentRound >= audiosList.length) {
+        loadingMsg.style.display = 'none';
+        stimulusArea.style.display = 'none';
+        doneMsg.style.display = 'block';
+        stopFullTestRecording();   // завершаем общую запись
+        return;
+      }
+      loadingMsg.style.display = 'block';
       stimulusArea.style.display = 'none';
-      doneMsg.style.display = 'block';
-      return;
+
+      // Вставляем метку в общую запись
+      insertTimeMarker();
+
+      currentTextValue = textsList[currentRound];
+      currentAudioValue = audiosList[currentRound];
+      currentStimulusId = 'mix_' + currentRound;
+
+      stimulusText.textContent = currentTextValue;
+
+      if (currentAudioValue) {
+        audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + currentAudioValue;
+        stimulusAudio.load();
+        stimulusAudio.style.display = 'block';
+        playBtn.style.display = 'none';
+        stimulusAudio.play().catch(e => {
+          console.log('Автоплей заблокирован');
+          playBtn.style.display = 'inline-block';
+        });
+      } else {
+        stimulusAudio.style.display = 'none';
+        playBtn.style.display = 'none';
+      }
+
+      textResponse.value = '';
+      recordedBlob = null;
+      playRecordBtn.disabled = true;
+      clearRecordBtn.disabled = true;
+      recordBtn.disabled = false;
+      stopRecordBtn.disabled = true;
+      recordStatus.textContent = '';
+
+      loadingMsg.style.display = 'none';
+      stimulusArea.style.display = 'block';
     }
-    loadingMsg.style.display = 'block';
-    stimulusArea.style.display = 'none';
 
-    // Берём текущие элементы из перемешанных списков
-    currentTextValue = textsList[currentRound];
-    currentAudioValue = audiosList[currentRound];
-    currentStimulusId = 'mix_' + currentRound;
-
-    stimulusText.textContent = currentTextValue;
-
-    if (currentAudioValue) {
-      audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + currentAudioValue;
-      stimulusAudio.load();
-      stimulusAudio.style.display = 'block';
-      playBtn.style.display = 'none';
-      stimulusAudio.play().catch(e => {
-        console.log('Автоплей заблокирован');
-        playBtn.style.display = 'inline-block';
-      });
-    } else {
-      stimulusAudio.style.display = 'none';
-      playBtn.style.display = 'none';
-    }
-
-    textResponse.value = '';
-    recordedBlob = null;
-    playRecordBtn.disabled = true;
-    clearRecordBtn.disabled = true;
-    recordBtn.disabled = false;
-    stopRecordBtn.disabled = true;
-    recordStatus.textContent = '';
-
-    loadingMsg.style.display = 'none';
-    stimulusArea.style.display = 'block';
-  }
-
-    // Загрузка одного раунда (случайный текст + случайное аудио)
-
-
+    // --- Обработчики записи отдельного ответа ---
     playBtn.addEventListener('click', () => {
       stimulusAudio.currentTime = 0;
       stimulusAudio.play().catch(e => alert('Не удалось воспроизвести: ' + e.message));
@@ -231,7 +293,7 @@ async function startTestWithLists() {
       } catch (err) {
         console.error('Ошибка микрофона:', err);
         if (err.name === 'NotAllowedError') {
-          recordStatus.textContent = '❌ Доступ к микрофону запрещён. Разрешите в настройках браузера.';
+          recordStatus.textContent = '❌ Доступ к микрофону запрещён.';
         } else if (err.name === 'NotFoundError') {
           recordStatus.textContent = '❌ Микрофон не найден.';
         } else {
@@ -270,6 +332,7 @@ async function startTestWithLists() {
       });
     }
 
+    // --- Отправка ответа и переход к следующему ---
     nextBtn.addEventListener('click', async () => {
       if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
