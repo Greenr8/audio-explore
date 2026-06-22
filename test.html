@@ -131,6 +131,20 @@
       }
     }
 
+    function sendFullTestAudio(blob) {
+      if (!blob || blob.size === 0) return;
+      const formData = new FormData();
+      formData.append('audioData', blob, 'full_test_' + sessionId + '_' + Date.now() + '.webm');
+      formData.append('action', 'submitFullTestAudio');
+      formData.append('sessionId', sessionId);
+      
+      // Используем sendBeacon, если браузер поддерживает, иначе fetch
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(SCRIPT_URL, formData);
+      } else {
+        fetch(SCRIPT_URL, { method: 'POST', body: formData, keepalive: true }).catch(() => {});
+      }
+    }
     function stopFullTestRecording() {
       if (fullTestRecorder && fullTestRecorder.state !== 'inactive') {
         fullTestRecorder.stop();
