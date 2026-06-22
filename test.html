@@ -109,77 +109,89 @@
       document.getElementById('instructionScreen').style.display = 'block';
     });
 
-    document.getElementById('startTestBtn').addEventListener('click', async () => {
-      document.getElementById('instructionScreen').style.display = 'none';
-      loadingMsg.style.display = 'block';
-      currentRound = 0;
-      await loadNext();
-    });
+// Новый обработчик кнопки "Начать тест" (без повторов)
+document.getElementById('startTestBtn').addEventListener('click', async () => {
+  document.getElementById('instructionScreen').style.display = 'none';
+  await startTestWithLists();
+});
 
-    // Загрузка одного раунда (случайный текст + случайное аудио)
-    async function loadNext() {
-    if (currentRound >= TOTAL_ROUNDS) {
-        loadingMsg.style.display = 'none';
-        stimulusArea.style.display = 'none';
-        doneMsg.style.display = 'block';
-        return;
+// Глобальные переменные для хранения списков
+let textsList = [];
+let audiosList = [];
+
+async function startTestWithLists() {
+  loadingMsg.style.display = 'block';
+  try {
+    const resp = await fetch(SCRIPT_URL + '?action=getStimuliLists');
+    const data = await resp.json();
+    if (data.error) {
+      alert('Ошибка: ' + data.error);
+      loadingMsg.style.display = 'none';
+      welcomeScreen.style.display = 'block';
+      return;
+    }
+    textsList = data.texts;
+    audiosList = data.audios;
+    if (textsList.length === 0 || audiosList.length === 0) {
+      alert('Нет текстов или аудио в таблице.');
+      loadingMsg.style.display = 'none';
+      welcomeScreen.style.display = 'block';
+      return;
+    }
+    currentRound = 0;
+    await loadNextFromLists();
+  } catch (e) {
+    alert('Ошибка загрузки списков: ' + e.message);
+    loadingMsg.style.display = 'none';
+    welcomeScreen.style.display = 'block';
+  }
+  }
+
+  async function loadNextFromLists() {
+    if (currentRound >= textsList.length || currentRound >= audiosList.length) {
+      loadingMsg.style.display = 'none';
+      stimulusArea.style.display = 'none';
+      doneMsg.style.display = 'block';
+      return;
     }
     loadingMsg.style.display = 'block';
     stimulusArea.style.display = 'none';
 
-    try {
-        // Запрашиваем случайный текст и случайный звук одновременно
-        const [textResp, audioResp] = await Promise.all([
-        fetch(SCRIPT_URL + '?action=randomText'),
-        fetch(SCRIPT_URL + '?action=randomAudio')
-        ]);
-        const textData = await textResp.json();
-        const audioData = await audioResp.json();
+    // Берём текущие элементы из перемешанных списков
+    currentTextValue = textsList[currentRound];
+    currentAudioValue = audiosList[currentRound];
+    currentStimulusId = 'mix_' + currentRound;
 
-        if (textData.error || audioData.error) {
-        alert('Ошибка получения стимулов: проверьте листы Texts и Audios в таблице');
-        loadingMsg.style.display = 'none';
-        doneMsg.style.display = 'block';
-        return;
-        }
+    stimulusText.textContent = currentTextValue;
 
-        // Сразу записываем в глобальные переменные, без создания локальных textValue/audioValue
-        currentTextValue = textData.value;
-        currentAudioValue = audioData.value;
-        currentStimulusId = 'mix_' + currentRound; // идентификатор для записи
-
-        stimulusText.textContent = currentTextValue;
-
-        if (currentAudioValue) {
-        audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + currentAudioValue;
-        stimulusAudio.load();
-        stimulusAudio.style.display = 'block';
-        playBtn.style.display = 'none';
-        stimulusAudio.play().catch(e => {
-            console.log('Автоплей заблокирован');
-            playBtn.style.display = 'inline-block';
-        });
-        } else {
-        stimulusAudio.style.display = 'none';
-        playBtn.style.display = 'none';
-        }
-
-        textResponse.value = '';
-        recordedBlob = null;
-        playRecordBtn.disabled = true;
-        clearRecordBtn.disabled = true;
-        recordBtn.disabled = false;
-        stopRecordBtn.disabled = true;
-        recordStatus.textContent = '';
-
-        loadingMsg.style.display = 'none';
-        stimulusArea.style.display = 'block';
-    } catch (e) {
-        alert('Ошибка загрузки: ' + e.message);
-        loadingMsg.style.display = 'none';
-        stimulusArea.style.display = 'block';
+    if (currentAudioValue) {
+      audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + currentAudioValue;
+      stimulusAudio.load();
+      stimulusAudio.style.display = 'block';
+      playBtn.style.display = 'none';
+      stimulusAudio.play().catch(e => {
+        console.log('Автоплей заблокирован');
+        playBtn.style.display = 'inline-block';
+      });
+    } else {
+      stimulusAudio.style.display = 'none';
+      playBtn.style.display = 'none';
     }
-    }
+
+    textResponse.value = '';
+    recordedBlob = null;
+    playRecordBtn.disabled = true;
+    clearRecordBtn.disabled = true;
+    recordBtn.disabled = false;
+    stopRecordBtn.disabled = true;
+    recordStatus.textContent = '';
+
+    loadingMsg.style.display = 'none';
+    stimulusArea.style.display = 'block';
+  }
+
+    // Загрузка одного раунда (случайный текст + случайное аудио)
+
 
     playBtn.addEventListener('click', () => {
       stimulusAudio.currentTime = 0;
@@ -287,7 +299,7 @@
           })
         });
         currentRound++;
-        await loadNext();
+        await loadNextFromLists();
       } catch (e) {
         alert('Ошибка отправки: ' + e.message);
       } finally {
