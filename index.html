@@ -78,6 +78,8 @@
     let currentTextValue = null;
     let currentAudioValue = null;
     let textsList = [];
+    let startTime = 0;
+    let stimulusShownTime = 0;
     let audiosList = [];
 
     // Переменные для ПОЛНОЙ записи теста
@@ -128,17 +130,21 @@
 
     function sendFullTestAudio(blob) {
       if (!blob || blob.size === 0) return;
-      const formData = new FormData();
-      formData.append('audioData', blob, 'full_test_' + sessionId + '_' + Date.now() + '.webm');
-      formData.append('action', 'submitFullTestAudio');
-      formData.append('sessionId', sessionId);
-      
-      // Используем sendBeacon, если браузер поддерживает, иначе fetch
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(SCRIPT_URL, formData);
-      } else {
-        fetch(SCRIPT_URL, { method: 'POST', body: formData, keepalive: true }).catch(() => {});
-      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'submitFullTestAudio',
+            audioData: base64,
+            sessionId: sessionId
+          }),
+          keepalive: true
+        }).catch(() => console.error('Не удалось отправить общую запись'));
+      };
+      reader.readAsDataURL(blob);
     }
     function stopFullTestRecording() {
       if (fullTestRecorder && fullTestRecorder.state !== 'inactive') {
@@ -198,6 +204,7 @@
           stopFullTestRecording();
           return;
         }
+        startTime = Date.now();
         currentRound = 0;
         await loadNextFromLists();
       } catch (e) {
@@ -227,6 +234,7 @@
       currentStimulusId = 'mix_' + currentRound;
 
       stimulusText.textContent = currentTextValue;
+      stimulusShownTime = Date.now();
 
       if (currentAudioValue) {
         audioSource.src = 'https://greenr8.github.io/' + REPO_NAME + '/' + currentAudioValue;
@@ -297,6 +305,8 @@
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
+            stimulusShownMs: stimulusShownTime - startTime,
+            responseMs: Date.now() - startTime,
             action: 'submit',
             stimulusId: currentStimulusId,
             textResponse: txt,
