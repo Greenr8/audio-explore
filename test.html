@@ -116,25 +116,16 @@
         fullTestRecorder = new MediaRecorder(fullTestStream, { mimeType: 'audio/webm' });
         fullTestChunks = [];
         fullTestRecorder.ondataavailable = e => { if (e.data.size > 0) fullTestChunks.push(e.data); };
-        fullTestRecorder.onstop = async () => {
+        fullTestRecorder.onstop = () => {
           const blob = new Blob(fullTestChunks, { type: 'audio/webm' });
-          const reader = new FileReader();
-          reader.onload = async () => {
-            const base64 = reader.result.split(',')[1];
-            await fetch(SCRIPT_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({
-                action: 'submitFullTestAudio',
-                audioData: base64,
-                sessionId: sessionId
-              })
-            });
-          };
-          reader.readAsDataURL(blob);
+          // Отправляем через sendBeacon, если страница ещё жива
+          sendFullTestAudio(blob);
         };
         fullTestRecorder.start();
         isFullTestRecording = true;
+
+        // При уходе со страницы останавливаем запись
+        window.addEventListener('beforeunload', stopFullTestRecording);
       } catch (e) {
         alert('Не удалось начать общую запись теста: ' + e.message);
       }
